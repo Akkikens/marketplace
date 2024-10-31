@@ -2,16 +2,26 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,            // Skip type checking in node_modules
+    "noEmitOnError": false,          // Allow emitting JavaScript even if there are errors
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
   "include": [
+    "src/**/*",                      // Include source files in the src folder
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+  ],
+  "exclude": [
+    "node_modules",                  // Exclude node_modules to avoid extraneous type checks
+    "lib",                           // Exclude build artifacts if applicable
+    "functions/node_modules"         // Explicitly exclude functions/node_modules if needed
+  ],
+  "predeploy": [
+  "npm --prefix ./functions run lint",
+  "npm --prefix ./functions run build"
+]
 }

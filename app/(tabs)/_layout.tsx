@@ -1,30 +1,43 @@
-// app/(tabs)/_layout.tsx
-import React, { useEffect, useState } from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../../firebaseConfig'; // Adjust the import path if needed
-import LoginScreen from './LoginScreen';
-import ExploreScreen from './ExploreScreen';
-import HomeScreen from './index';
+// File: app/(tabs)/_layout.tsx
 
-const Tab = createBottomTabNavigator();
+import React, { useEffect, useState } from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { FIREBASE_AUTH } from '../../firebaseConfig';
+import HomeScreen from '../screens/HomeScreen';
+import Login from '../screens/Login';
+import Register from '../screens/Register';
+import WelcomeScreen from '../screens/WelcomeScreen';
+import { View, ActivityIndicator } from 'react-native';
+
+const Stack = createNativeStackNavigator();
 
 export default function Layout() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (currentUser) => {
       setUser(currentUser);
+      setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  return user ? (
-    <Tab.Navigator>
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Explore" component={ExploreScreen} />
-    </Tab.Navigator>
-  ) : (
-    <LoginScreen />
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack.Navigator initialRouteName={user ? "Welcome" : "Home"}>
+      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
+      <Stack.Screen name="Register" component={Register} options={{ title: 'Register' }} />
+      <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'Welcome' }} />
+    </Stack.Navigator>
   );
 }

@@ -1,0 +1,15 @@
+// File: functions/tsconfig.json
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    "esModuleInterop": true,
+    "target": "es2017",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "lib",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}
