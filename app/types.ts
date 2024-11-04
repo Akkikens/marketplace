@@ -3,13 +3,12 @@
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// File: app/types.ts
-
 export type RootStackParamList = {
     Home: undefined;
     Login: { ssoMode?: boolean };  // Ensure Login has ssoMode as optional
     Register: { otpEnabled: boolean };
     Welcome: undefined;
+    ItemDetails: { itemId: string };  // Define itemId as string or appropriate type
 };
 
 
