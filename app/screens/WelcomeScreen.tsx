@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Modal, View, Image, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, Modal, View, Image, StyleSheet, TextInput, TouchableOpacity, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '../../firebaseConfig';
 import { signOut } from 'firebase/auth';
@@ -7,7 +7,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { dummyListings } from '@/app/data/dummyListing';
 import { Grid, Button, Typography, TextField, Box } from '@mui/material';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker'; // Import image picker
+import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList } from '../types';
 
 interface Item {
@@ -55,9 +55,10 @@ const WelcomeScreen: React.FC = () => {
       sellerName: 'Clark User',
     };
 
+    // Add item locally and to Firestore
+    setItems((prevItems) => [...prevItems, itemWithDefaults]);
     try {
-      const docRef = await addDoc(collection(FIRESTORE_DB, 'marketplace-items'), itemWithDefaults);
-      setItems([...items, { ...itemWithDefaults, id: docRef.id }]);
+      await addDoc(collection(FIRESTORE_DB, 'marketplace-items'), itemWithDefaults);
       setIsSellModalVisible(false);
       setNewItem({ name: '', price: '', description: '', location: '', image: '' });
     } catch (error) {
@@ -79,21 +80,19 @@ const WelcomeScreen: React.FC = () => {
   const openSellModal = () => setIsSellModalVisible(true);
   const closeSellModal = () => setIsSellModalVisible(false);
 
-  // Pick image function
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
     });
 
-    if (!result.canceled) {
-      setNewItem({ ...newItem, image: result.uri });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setNewItem({ ...newItem, image: result.assets[0].uri });
     }
   };
 
-  // Price validation
   const handlePriceChange = (text: string) => {
     const numericValue = text.replace(/[^0-9]/g, '');
     setNewItem({ ...newItem, price: `$${numericValue}` });
