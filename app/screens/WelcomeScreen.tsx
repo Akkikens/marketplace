@@ -1,9 +1,7 @@
-// File: app/screens/WelcomeScreen.tsx
-
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, TextInput, Button, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { FIRESTORE_DB, FIREBASE_AUTH } from '../../firebaseConfig';
 import { WelcomeScreenNavigationProp } from '../types';
@@ -12,16 +10,25 @@ const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
   const [items, setItems] = useState<any[]>([]);
   const [newItem, setNewItem] = useState({ name: '', price: '', description: '' });
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
 
+  // Fetch items from Firestore
   useEffect(() => {
     const fetchItems = async () => {
-      const querySnapshot = await getDocs(collection(FIRESTORE_DB, "marketplace-items"));
+      const q = categoryFilter
+        ? query(collection(FIRESTORE_DB, "marketplace-items"), where("category", "==", categoryFilter))
+        : collection(FIRESTORE_DB, "marketplace-items");
+
+      const querySnapshot = await getDocs(q);
       setItems(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
     };
     fetchItems();
-  }, []);
+  }, [categoryFilter]);
 
+  // Handle item addition
   const handleAddItem = async () => {
+    if (!newItem.name || !newItem.price) return; // Basic validation
     try {
       const docRef = await addDoc(collection(FIRESTORE_DB, "marketplace-items"), newItem);
       setItems([...items, { ...newItem, id: docRef.id }]);
@@ -31,25 +38,46 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
+  // Handle Logout
   const handleLogout = async () => {
     try {
       await signOut(FIREBASE_AUTH);
-      navigation.navigate('Login', { ssoMode: false });  // Redirect to Login screen
+      navigation.navigate('Login', { ssoMode: false });
     } catch (error) {
-      Alert.alert("Logout Error", "There was an error logging out. Please try again.");
       console.error("Error signing out: ", error);
     }
   };
 
+  // Filter items based on search text
+  const filteredItems = items.filter(item =>
+    item.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchText.toLowerCase())
+  );
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.welcomeText}>Welcome to Clark Marketplace!</Text>
-      <Text style={styles.description}>
-        You have successfully signed in. Buy, sell, and connect with fellow Clark students!
-      </Text>
+      <Text style={styles.description}>Buy, sell, and connect with fellow Clark students!</Text>
 
       <Button title="Logout" onPress={handleLogout} />
 
+      {/* Filter Section */}
+      <View style={styles.filterContainer}>
+        <TextInput
+          placeholder="Search items..."
+          value={searchText}
+          onChangeText={setSearchText}
+          style={styles.searchInput}
+        />
+        <View style={styles.categoryFilter}>
+          <TouchableOpacity onPress={() => setCategoryFilter(null)}><Text>All</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setCategoryFilter('Electronics')}><Text>Electronics</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setCategoryFilter('Furniture')}><Text>Furniture</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setCategoryFilter('Books')}><Text>Books</Text></TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Add Item Form */}
       <View style={styles.formContainer}>
         <TextInput
           placeholder="Item Name"
@@ -74,8 +102,9 @@ const WelcomeScreen: React.FC = () => {
         <Button title="Add Item" onPress={handleAddItem} />
       </View>
 
+      {/* Item Listing Section */}
       <View style={styles.gridContainer}>
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <View key={item.id} style={styles.card}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemPrice}>Price: ${item.price}</Text>
@@ -123,6 +152,22 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 8,
     marginBottom: 10,
+  },
+  filterContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  searchInput: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    padding: 8,
+    marginBottom: 10,
+  },
+  categoryFilter: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
   },
   gridContainer: {
     width: '100%',
