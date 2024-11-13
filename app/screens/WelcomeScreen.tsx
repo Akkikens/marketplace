@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, Modal, View, Image, StyleSheet, TextInput } from 'react-native';
+import { ScrollView, Modal, View, Image, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '../../firebaseConfig';
 import { signOut } from 'firebase/auth';
@@ -7,9 +7,9 @@ import { collection, addDoc } from 'firebase/firestore';
 import { dummyListings } from '@/app/data/dummyListing';
 import { Grid, Button, Typography, TextField, Box } from '@mui/material';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker'; // Import image picker
 import { RootStackParamList } from '../types';
 
-// Define the Item type for better type safety
 interface Item {
   id: string;
   name: string;
@@ -27,7 +27,7 @@ const WelcomeScreen: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isSellModalVisible, setIsSellModalVisible] = useState(false); // For "Sell Something" modal
+  const [isSellModalVisible, setIsSellModalVisible] = useState(false);
   const [newItem, setNewItem] = useState({
     name: '',
     price: '',
@@ -36,7 +36,6 @@ const WelcomeScreen: React.FC = () => {
     image: '',
   });
 
-  // Handle Logout
   const handleLogout = async () => {
     try {
       await signOut(FIREBASE_AUTH);
@@ -46,17 +45,16 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
-  // Handle adding new item to Firestore and listings
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.description || !newItem.location) return;
-    
+    if (!newItem.name || !newItem.price || !newItem.description || !newItem.location || !newItem.image) return;
+
     const itemWithDefaults: Item = {
       ...newItem,
       id: Date.now().toString(),
-      email: 'seller@clarku.edu', // Example email; replace with actual user email if available
-      sellerName: 'Clark User',   // Example name; replace with actual seller name if available
+      email: 'seller@clarku.edu',
+      sellerName: 'Clark User',
     };
-    
+
     try {
       const docRef = await addDoc(collection(FIRESTORE_DB, 'marketplace-items'), itemWithDefaults);
       setItems([...items, { ...itemWithDefaults, id: docRef.id }]);
@@ -67,14 +65,12 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
-  // Filter items based on search text
   const filteredItems = items.filter(
     (item) =>
       item.name.toLowerCase().includes(searchText.toLowerCase()) ||
       item.description.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  // Open/Close Modals
   const openModal = (item: Item) => {
     setSelectedItem(item);
     setIsModalVisible(true);
@@ -82,6 +78,26 @@ const WelcomeScreen: React.FC = () => {
   const closeModal = () => setIsModalVisible(false);
   const openSellModal = () => setIsSellModalVisible(true);
   const closeSellModal = () => setIsSellModalVisible(false);
+
+  // Pick image function
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setNewItem({ ...newItem, image: result.uri });
+    }
+  };
+
+  // Price validation
+  const handlePriceChange = (text: string) => {
+    const numericValue = text.replace(/[^0-9]/g, '');
+    setNewItem({ ...newItem, price: `$${numericValue}` });
+  };
 
   return (
     <ScrollView style={{ padding: 20, backgroundColor: '#f2f2f2' }}>
@@ -122,7 +138,7 @@ const WelcomeScreen: React.FC = () => {
               />
               <Typography variant="h6">{item.name}</Typography>
               <Typography color="textSecondary" gutterBottom>
-                Price: ${item.price}
+                Price: {item.price}
               </Typography>
               <Typography variant="body2" paragraph>
                 {item.description}
@@ -156,7 +172,7 @@ const WelcomeScreen: React.FC = () => {
                 />
                 <Typography variant="h6">{selectedItem.name}</Typography>
                 <Typography color="textSecondary" gutterBottom>
-                  Price: ${selectedItem.price}
+                  Price: {selectedItem.price}
                 </Typography>
                 <Typography variant="body2" paragraph>
                   {selectedItem.description}
@@ -192,7 +208,7 @@ const WelcomeScreen: React.FC = () => {
             <TextInput
               placeholder="Price"
               value={newItem.price}
-              onChangeText={(text) => setNewItem({ ...newItem, price: text })}
+              onChangeText={handlePriceChange}
               style={styles.input}
               keyboardType="numeric"
             />
@@ -209,6 +225,12 @@ const WelcomeScreen: React.FC = () => {
               onChangeText={(text) => setNewItem({ ...newItem, location: text })}
               style={styles.input}
             />
+            <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
+              <Text>Select Image</Text>
+            </TouchableOpacity>
+            {newItem.image ? (
+              <Image source={{ uri: newItem.image }} style={{ width: '100%', height: 100, marginTop: 10 }} />
+            ) : null}
             <Button variant="contained" color="primary" onClick={handleAddItem} style={{ marginTop: 10 }}>
               List Item
             </Button>
@@ -224,7 +246,6 @@ const WelcomeScreen: React.FC = () => {
 
 export default WelcomeScreen;
 
-// Modal styles
 const modalStyles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -249,5 +270,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     marginVertical: 8,
+  },
+  imagePicker: {
+    marginVertical: 10,
+    padding: 10,
+    backgroundColor: '#ddd',
+    borderRadius: 5,
+    alignItems: 'center',
   },
 });
