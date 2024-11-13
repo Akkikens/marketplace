@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { TextInput, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { FIRESTORE_DB, FIREBASE_AUTH } from '../../firebaseConfig';
 import { WelcomeScreenNavigationProp } from '../types';
+import { dummyListings } from '@/app/data/dummyListing';
+import { Grid, Button, Typography, TextField, Box } from '@mui/material';
+import { Image } from 'react-native'; // Import Image component from React Native
+
 
 const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>(dummyListings); // Set dummy listings as initial items
   const [newItem, setNewItem] = useState({ name: '', price: '', description: '' });
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
 
-  // Fetch items from Firestore
   useEffect(() => {
     const fetchItems = async () => {
       const q = categoryFilter
@@ -21,14 +24,14 @@ const WelcomeScreen: React.FC = () => {
         : collection(FIRESTORE_DB, "marketplace-items");
 
       const querySnapshot = await getDocs(q);
-      setItems(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      const firestoreItems = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setItems([...dummyListings, ...firestoreItems]); // Append Firestore items to dummy listings
     };
     fetchItems();
   }, [categoryFilter]);
 
-  // Handle item addition
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price) return; // Basic validation
+    if (!newItem.name || !newItem.price) return;
     try {
       const docRef = await addDoc(collection(FIRESTORE_DB, "marketplace-items"), newItem);
       setItems([...items, { ...newItem, id: docRef.id }]);
@@ -38,7 +41,6 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
-  // Handle Logout
   const handleLogout = async () => {
     try {
       await signOut(FIREBASE_AUTH);
@@ -48,155 +50,113 @@ const WelcomeScreen: React.FC = () => {
     }
   };
 
-  // Filter items based on search text
   const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(searchText.toLowerCase()) ||
     item.description.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.welcomeText}>Welcome to Clark Marketplace!</Text>
-      <Text style={styles.description}>Buy, sell, and connect with fellow Clark students!</Text>
+    <ScrollView style={{ padding: 20, backgroundColor: '#f2f2f2' }}>
+      <Typography variant="h4" gutterBottom>Welcome to Clark Marketplace!</Typography>
+      <Typography variant="subtitle1" paragraph>
+        Buy, sell, and connect with fellow Clark students!
+      </Typography>
 
-      <Button title="Logout" onPress={handleLogout} />
+      <Button variant="outlined" color="secondary" onClick={handleLogout} style={{ marginBottom: 20 }}>
+        Logout
+      </Button>
 
-      {/* Filter Section */}
-      <View style={styles.filterContainer}>
-        <TextInput
+      <Box style={{ marginBottom: 20 }}>
+        <TextField
+          fullWidth
           placeholder="Search items..."
           value={searchText}
-          onChangeText={setSearchText}
-          style={styles.searchInput}
+          onChange={(e) => setSearchText(e.target.value)}
+          variant="outlined"
+          margin="dense"
+          style={{ marginBottom: 10 }}
         />
-        <View style={styles.categoryFilter}>
-          <TouchableOpacity onPress={() => setCategoryFilter(null)}><Text>All</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setCategoryFilter('Electronics')}><Text>Electronics</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setCategoryFilter('Furniture')}><Text>Furniture</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => setCategoryFilter('Books')}><Text>Books</Text></TouchableOpacity>
-        </View>
-      </View>
+        <Box display="flex" justifyContent="space-between" mb={2}>
+          <Button onClick={() => setCategoryFilter(null)}>All</Button>
+          <Button onClick={() => setCategoryFilter('Electronics')}>Electronics</Button>
+          <Button onClick={() => setCategoryFilter('Furniture')}>Furniture</Button>
+          <Button onClick={() => setCategoryFilter('Books')}>Books</Button>
+        </Box>
+      </Box>
 
-      {/* Add Item Form */}
-      <View style={styles.formContainer}>
-        <TextInput
+      <Box component="form" style={{ marginBottom: 20 }}>
+        <TextField
+          fullWidth
           placeholder="Item Name"
           value={newItem.name}
-          onChangeText={(text) => setNewItem({ ...newItem, name: text })}
-          style={styles.textField}
+          onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+          variant="outlined"
+          margin="dense"
+          style={{ marginBottom: 10 }}
         />
-        <TextInput
+        <TextField
+          fullWidth
           placeholder="Price"
           value={newItem.price}
-          onChangeText={(text) => setNewItem({ ...newItem, price: text })}
-          keyboardType="numeric"
-          style={styles.textField}
+          onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+          variant="outlined"
+          margin="dense"
+          type="number"
+          style={{ marginBottom: 10 }}
         />
-        <TextInput
+        <TextField
+          fullWidth
           placeholder="Description"
           value={newItem.description}
-          onChangeText={(text) => setNewItem({ ...newItem, description: text })}
+          onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+          variant="outlined"
+          margin="dense"
           multiline
-          style={styles.textField}
+          rows={3}
+          style={{ marginBottom: 10 }}
         />
-        <Button title="Add Item" onPress={handleAddItem} />
-      </View>
+        <Button variant="contained" color="primary" onClick={handleAddItem}>
+          Add Item
+        </Button>
+      </Box>
 
-      {/* Item Listing Section */}
-      <View style={styles.gridContainer}>
+      <Grid container spacing={2}>
         {filteredItems.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemPrice}>Price: ${item.price}</Text>
-            <Text style={styles.itemDescription}>{item.description}</Text>
-            <Button
-              title="View Item"
-              onPress={() => navigation.navigate('ItemDetails', { itemId: item.id })}
-            />
-          </View>
+          <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
+            <Box
+              padding={2}
+              borderRadius={2}
+              boxShadow={2}
+              bgcolor="background.paper"
+              textAlign="center"
+            >
+            <Image source={{ uri: item.image }} style={{ width: '100%', height: 150, borderRadius: 8, marginBottom: 10 }} />
+
+              <Typography variant="h6">{item.name}</Typography>
+              <Typography color="textSecondary" gutterBottom>
+                Price: ${item.price}
+              </Typography>
+              <Typography variant="body2" paragraph>
+                {item.description}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                Location: {item.location}
+              </Typography>
+              <Button
+                variant="contained"
+                color="secondary"
+                fullWidth
+                style={{ marginTop: 10 }}
+                onClick={() => navigation.navigate('ItemDetails', { itemId: item.id })}
+              >
+                View Item
+              </Button>
+            </Box>
+          </Grid>
         ))}
-      </View>
+      </Grid>
     </ScrollView>
   );
 };
 
 export default WelcomeScreen;
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
-    alignItems: 'center',
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 20,
-  },
-  formContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  textField: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 8,
-    marginBottom: 10,
-  },
-  filterContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  searchInput: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    padding: 8,
-    marginBottom: 10,
-  },
-  categoryFilter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  gridContainer: {
-    width: '100%',
-    marginTop: 20,
-  },
-  card: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  itemName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  itemPrice: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 5,
-  },
-  itemDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-  },
-});
