@@ -8,6 +8,7 @@ import HomeScreen from '../screens/HomeScreen';
 import Login from '../screens/Login';
 import Register from '../screens/Register';
 import WelcomeScreen from '../screens/WelcomeScreen';
+import ChatScreen from '../screens/ChatScreen';
 import { View, ActivityIndicator } from 'react-native';
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +39,7 @@ export default function Layout() {
       <Stack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
       <Stack.Screen name="Register" component={Register} options={{ title: 'Register' }} />
       <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ title: 'Welcome' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
     </Stack.Navigator>
   );
 }

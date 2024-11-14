@@ -3,11 +3,11 @@ import { ScrollView, Modal, View, Image, StyleSheet, TextInput, TouchableOpacity
 import { useNavigation } from '@react-navigation/native';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '../../firebaseConfig';
 import { signOut } from 'firebase/auth';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { dummyListings } from '@/app/data/dummyListing';
 import { Grid, Button, Typography, TextField, Box } from '@mui/material';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 
 interface Item {
@@ -28,6 +28,7 @@ const WelcomeScreen: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSellModalVisible, setIsSellModalVisible] = useState(false);
+  const [isMessageModalVisible, setIsMessageModalVisible] = useState(false);
   const [newItem, setNewItem] = useState({
     name: '',
     price: '',
@@ -35,6 +36,7 @@ const WelcomeScreen: React.FC = () => {
     location: '',
     image: '',
   });
+  const [messageText, setMessageText] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -46,23 +48,26 @@ const WelcomeScreen: React.FC = () => {
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.description || !newItem.location || !newItem.image) return;
+    if (!newItem.name || !newItem.price || !newItem.description || !newItem.location || !newItem.image) {
+      alert("Please fill in all fields and select an image");
+      return;
+    }
 
     const itemWithDefaults: Item = {
       ...newItem,
       id: Date.now().toString(),
-      email: 'seller@clarku.edu',
-      sellerName: 'Clark User',
+      email: FIREBASE_AUTH.currentUser?.email || 'unknown@clarku.edu',
+      sellerName: FIREBASE_AUTH.currentUser?.displayName || 'Clark User',
     };
 
-    // Add item locally and to Firestore
     setItems((prevItems) => [...prevItems, itemWithDefaults]);
+
     try {
       await addDoc(collection(FIRESTORE_DB, 'marketplace-items'), itemWithDefaults);
       setIsSellModalVisible(false);
       setNewItem({ name: '', price: '', description: '', location: '', image: '' });
     } catch (error) {
-      console.error('Error adding item: ', error);
+      console.error('Error adding item to Firestore: ', error);
     }
   };
 
@@ -96,6 +101,28 @@ const WelcomeScreen: React.FC = () => {
   const handlePriceChange = (text: string) => {
     const numericValue = text.replace(/[^0-9]/g, '');
     setNewItem({ ...newItem, price: `$${numericValue}` });
+  };
+
+  // Function to send a message
+  const sendMessage = async () => {
+    if (!messageText) return;
+
+    const messageData = {
+      senderId: FIREBASE_AUTH.currentUser?.uid,
+      senderEmail: FIREBASE_AUTH.currentUser?.email,
+      receiverEmail: selectedItem?.email,
+      text: messageText,
+      timestamp: serverTimestamp(),
+    };
+
+    try {
+      await addDoc(collection(FIRESTORE_DB, 'messages'), messageData);
+      setMessageText('');
+      setIsMessageModalVisible(false);
+      alert("Message sent successfully!");
+    } catch (error) {
+      console.error("Error sending message: ", error);
+    }
   };
 
   return (
@@ -182,11 +209,38 @@ const WelcomeScreen: React.FC = () => {
                 <Typography variant="caption" color="textSecondary">
                   Listed by: {selectedItem.email}
                 </Typography>
-                <Button variant="contained" color="primary" onClick={closeModal} style={{ marginTop: 10 }}>
+                <Button variant="contained" color="primary" onClick={() => setIsMessageModalVisible(true)} style={{ marginTop: 10 }}>
+                  Send Message
+                </Button>
+                <Button variant="contained" color="secondary" onClick={closeModal} style={{ marginTop: 10 }}>
                   Close
                 </Button>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal for Messaging */}
+      <Modal animationType="slide" transparent visible={isMessageModalVisible} onRequestClose={() => setIsMessageModalVisible(false)}>
+        <View style={modalStyles.modalContainer}>
+          <View style={modalStyles.modalContent}>
+            <Typography variant="h6" gutterBottom>
+              Send a Message
+            </Typography>
+            <TextInput
+              placeholder="Type your message here..."
+              value={messageText}
+              onChangeText={setMessageText}
+              style={styles.input}
+              multiline
+            />
+            <Button variant="contained" color="primary" onClick={sendMessage} style={{ marginTop: 10 }}>
+              Send
+            </Button>
+            <Button variant="outlined" color="secondary" onClick={() => setIsMessageModalVisible(false)} style={{ marginTop: 10 }}>
+              Cancel
+            </Button>
           </View>
         </View>
       </Modal>

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD16k-BCZ5vme3uokyoDQvJTsNh0U0RXHk",
@@ -14,4 +14,7 @@ const firebaseConfig = {
 // Initialize Firebase
 export const FIREBASE_APP = initializeApp(firebaseConfig);
 export const FIREBASE_AUTH = getAuth(FIREBASE_APP);
-export const FIRESTORE_DB = getFirestore(FIREBASE_APP); // Exported as FIRESTORE_DB
+export const FIRESTORE_DB = initializeFirestore(FIREBASE_APP, {
+  experimentalForceLongPolling: true, 
+  useFetchStreams: false,
+});
