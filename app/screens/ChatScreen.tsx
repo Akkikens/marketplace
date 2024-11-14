@@ -1,89 +1,86 @@
 // File: app/screens/ChatScreen.tsx
 
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, ScrollView, Button, Text, StyleSheet } from 'react-native';
-import { FIREBASE_AUTH, FIRESTORE_DB } from '../../firebaseConfig';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { addDoc, collection, query, where, onSnapshot, orderBy, serverTimestamp } from 'firebase/firestore';
+import { FIRESTORE_DB, FIREBASE_AUTH } from '../../firebaseConfig';
 import { RootStackParamList } from '../types';
 
-interface Message {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  content: string;
-  timestamp: any;
-}
+type ChatScreenRouteProp = RouteProp<RootStackParamList, 'Chat'>;
 
 const ChatScreen: React.FC = () => {
-  const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
-  const { receiverId, receiverEmail } = route.params;
+  const route = useRoute<ChatScreenRouteProp>();
+  const { receiverId, receiverEmail } = route.params; // Getting receiver's info
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
-  const userId = FIREBASE_AUTH.currentUser?.uid;
+  const [messages, setMessages] = useState([]);
+
+  const senderId = FIREBASE_AUTH.currentUser?.uid;
+  const senderEmail = FIREBASE_AUTH.currentUser?.email;
 
   useEffect(() => {
-    const messagesRef = collection(FIRESTORE_DB, 'messages');
-    const q = query(
-      messagesRef,
+    if (!senderId) return;
+
+    const chatQuery = query(
+      collection(FIRESTORE_DB, 'chats'),
+      where('participants', 'array-contains', senderId),
       orderBy('timestamp', 'asc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedMessages = snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(chatQuery, (snapshot) => {
+      const fetchedMessages = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
-      })) as Message[];
-
-      setMessages(fetchedMessages.filter(
-        (msg) => 
-          (msg.senderId === userId && msg.receiverId === receiverId) ||
-          (msg.senderId === receiverId && msg.receiverId === userId)
-      ));
+        ...doc.data(),
+      }));
+      setMessages(fetchedMessages);
     });
 
     return unsubscribe;
-  }, [userId, receiverId]);
+  }, [senderId]);
 
-  const handleSendMessage = async () => {
-    if (message.trim() === '') return;
+  const handleSend = async () => {
+    if (!message.trim()) return;
 
     try {
-      await addDoc(collection(FIRESTORE_DB, 'messages'), {
-        senderId: userId,
-        receiverId: receiverId,
-        content: message,
-        timestamp: serverTimestamp()
+      await addDoc(collection(FIRESTORE_DB, 'chats'), {
+        text: message,
+        senderId,
+        senderEmail,
+        receiverId,
+        receiverEmail,
+        timestamp: serverTimestamp(),
+        participants: [senderId, receiverId],
       });
       setMessage('');
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message: ", error);
     }
   };
 
+  const renderItem = ({ item }: { item: any }) => (
+    <View style={item.senderId === senderId ? styles.sentMessage : styles.receivedMessage}>
+      <Text style={styles.messageText}>{item.text}</Text>
+      <Text style={styles.messageInfo}>{item.senderEmail}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Chat with {receiverEmail}</Text>
-      <ScrollView style={styles.messageContainer}>
-        {messages.map((msg) => (
-          <View
-            key={msg.id}
-            style={[
-              styles.message,
-              msg.senderId === userId ? styles.sent : styles.received
-            ]}
-          >
-            <Text style={styles.messageText}>{msg.content}</Text>
-          </View>
-        ))}
-      </ScrollView>
-      <TextInput
-        style={styles.input}
-        placeholder="Type a message..."
-        value={message}
-        onChangeText={setMessage}
+      <FlatList
+        data={messages}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.messageContainer}
       />
-      <Button title="Send" onPress={handleSendMessage} />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Type a message"
+          value={message}
+          onChangeText={setMessage}
+        />
+        <Button title="Send" onPress={handleSend} />
+      </View>
     </View>
   );
 };
@@ -94,40 +91,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 10,
-    backgroundColor: '#f2f2f2',
-  },
-  header: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
   },
   messageContainer: {
-    flex: 1,
-    marginBottom: 10,
+    paddingBottom: 10,
   },
-  message: {
+  inputContainer: {
+    flexDirection: 'row',
     padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
-    maxWidth: '80%',
-  },
-  sent: {
-    backgroundColor: '#d1e7dd',
-    alignSelf: 'flex-end',
-  },
-  received: {
-    backgroundColor: '#f8d7da',
-    alignSelf: 'flex-start',
-  },
-  messageText: {
-    color: '#333',
+    borderTopWidth: 1,
+    borderColor: '#ddd',
   },
   input: {
-    padding: 10,
+    flex: 1,
     borderColor: '#ccc',
     borderWidth: 1,
+    padding: 10,
     borderRadius: 5,
-    marginBottom: 10,
+    marginRight: 10,
+  },
+  sentMessage: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#DCF8C5',
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 5,
+    maxWidth: '80%',
+  },
+  receivedMessage: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E2E2E2',
+    padding: 10,
+    borderRadius: 5,
+    marginVertical: 5,
+    maxWidth: '80%',
+  },
+  messageText: {
+    fontSize: 16,
+  },
+  messageInfo: {
+    fontSize: 10,
+    color: '#555',
+    textAlign: 'right',
+    marginTop: 5,
   },
 });
