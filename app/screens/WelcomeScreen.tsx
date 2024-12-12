@@ -1,16 +1,25 @@
 // File: app/screens/WelcomeScreen.tsx
 
-import React, { useState } from 'react';
-import { ScrollView, Modal, View, Image, StyleSheet, TextInput, TouchableOpacity, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { FIREBASE_AUTH, FIRESTORE_DB } from '../../firebaseConfig';
-import { signOut } from 'firebase/auth';
-import { collection, addDoc } from 'firebase/firestore';
-import { dummyListings } from '@/app/data/dummyListing';
-import { Grid, Button, Typography, TextField, Box } from '@mui/material';
-import * as ImagePicker from 'expo-image-picker';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
+import React, { useState } from "react";
+import {
+  ScrollView,
+  Modal,
+  View,
+  Image,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Text,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { FIREBASE_AUTH, FIRESTORE_DB } from "../../firebaseConfig";
+import { signOut } from "firebase/auth";
+import { collection, addDoc } from "firebase/firestore";
+import { dummyListings } from "@/app/data/dummyListing";
+import { Grid, Button, Typography, TextField, Box } from "@mui/material";
+import * as ImagePicker from "expo-image-picker";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types";
 
 interface Item {
   id: string;
@@ -23,33 +32,39 @@ interface Item {
   sellerName: string;
 }
 
-
 const WelcomeScreen: React.FC = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Welcome'>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, "Welcome">>();
   const [items, setItems] = useState<Item[]>(dummyListings);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSellModalVisible, setIsSellModalVisible] = useState(false);
   const [newItem, setNewItem] = useState({
-    name: '',
-    price: '',
-    description: '',
-    location: '',
-    image: '',
+    name: "",
+    price: "",
+    description: "",
+    location: "",
+    image: "",
   });
 
   const handleLogout = async () => {
     try {
       await signOut(FIREBASE_AUTH);
-      navigation.navigate('Login', { ssoMode: false });
+      navigation.navigate("Login", { ssoMode: false });
     } catch (error) {
-      console.error('Error signing out: ', error);
+      console.error("Error signing out: ", error);
     }
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.price || !newItem.description || !newItem.location || !newItem.image) {
+    if (
+      !newItem.name ||
+      !newItem.price ||
+      !newItem.description ||
+      !newItem.location ||
+      !newItem.image
+    ) {
       alert("Please fill in all fields and select an image");
       return;
     }
@@ -57,18 +72,27 @@ const WelcomeScreen: React.FC = () => {
     const itemWithDefaults: Item = {
       ...newItem,
       id: Date.now().toString(),
-      email: FIREBASE_AUTH.currentUser?.email || 'unknown@clarku.edu',
-      sellerName: FIREBASE_AUTH.currentUser?.displayName || 'Clark User',
+      email: FIREBASE_AUTH.currentUser?.email || "unknown@clarku.edu",
+      sellerName: FIREBASE_AUTH.currentUser?.displayName || "Clark User",
     };
 
     setItems((prevItems) => [...prevItems, itemWithDefaults]);
 
     try {
-      await addDoc(collection(FIRESTORE_DB, 'marketplace-items'), itemWithDefaults);
+      await addDoc(
+        collection(FIRESTORE_DB, "marketplace-items"),
+        itemWithDefaults
+      );
       setIsSellModalVisible(false);
-      setNewItem({ name: '', price: '', description: '', location: '', image: '' });
+      setNewItem({
+        name: "",
+        price: "",
+        description: "",
+        location: "",
+        image: "",
+      });
     } catch (error) {
-      console.error('Error adding item to Firestore: ', error);
+      console.error("Error adding item to Firestore: ", error);
     }
   };
 
@@ -100,12 +124,12 @@ const WelcomeScreen: React.FC = () => {
   };
 
   const handlePriceChange = (text: string) => {
-    const numericValue = text.replace(/[^0-9]/g, '');
+    const numericValue = text.replace(/[^0-9]/g, "");
     setNewItem({ ...newItem, price: `$${numericValue}` });
   };
 
   return (
-    <ScrollView style={{ padding: 20, backgroundColor: '#f2f2f2' }}>
+    <ScrollView style={{ padding: 20, backgroundColor: "#f2f2f2" }}>
       <Typography variant="h4" gutterBottom>
         Welcome to Clark Marketplace!
       </Typography>
@@ -113,11 +137,21 @@ const WelcomeScreen: React.FC = () => {
         Buy, sell, and connect with fellow Clark students!
       </Typography>
 
-      <Button variant="outlined" color="secondary" onClick={handleLogout} style={{ marginBottom: 20 }}>
+      <Button
+        variant="outlined"
+        color="secondary"
+        onClick={handleLogout}
+        style={{ marginBottom: 20 }}
+      >
         Logout
       </Button>
 
-      <Button variant="contained" color="primary" onClick={openSellModal} style={{ marginBottom: 20 }}>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={openSellModal}
+        style={{ marginBottom: 20 }}
+      >
         Sell Something
       </Button>
 
@@ -136,10 +170,21 @@ const WelcomeScreen: React.FC = () => {
       <Grid container spacing={2}>
         {filteredItems.map((item) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={item.id}>
-            <Box padding={2} borderRadius={2} boxShadow={2} bgcolor="background.paper" textAlign="center">
+            <Box
+              padding={2}
+              borderRadius={2}
+              boxShadow={2}
+              bgcolor="background.paper"
+              textAlign="center"
+            >
               <Image
                 source={{ uri: item.image }}
-                style={{ width: '100%', height: 150, borderRadius: 8, marginBottom: 10 }}
+                style={{
+                  width: "100%",
+                  height: 150,
+                  borderRadius: 8,
+                  marginBottom: 10,
+                }}
               />
               <Typography variant="h6">{item.name}</Typography>
               <Typography color="textSecondary" gutterBottom>
@@ -166,14 +211,24 @@ const WelcomeScreen: React.FC = () => {
       </Grid>
 
       {/* Modal for Viewing Item Details */}
-      <Modal animationType="slide" transparent visible={isModalVisible} onRequestClose={closeModal}>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isModalVisible}
+        onRequestClose={closeModal}
+      >
         <View style={modalStyles.modalContainer}>
           <View style={modalStyles.modalContent}>
             {selectedItem && (
               <>
                 <Image
                   source={{ uri: selectedItem.image }}
-                  style={{ width: '100%', height: 150, borderRadius: 8, marginBottom: 10 }}
+                  style={{
+                    width: "100%",
+                    height: 150,
+                    borderRadius: 8,
+                    marginBottom: 10,
+                  }}
                 />
                 <Typography variant="h6">{selectedItem.name}</Typography>
                 <Typography color="textSecondary" gutterBottom>
@@ -188,17 +243,28 @@ const WelcomeScreen: React.FC = () => {
                 <Typography variant="caption" color="textSecondary">
                   Listed by: {selectedItem.email}
                 </Typography>
-                <Button variant="contained" color="primary" onClick={closeModal} style={{ marginTop: 10 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={closeModal}
+                  style={{ marginTop: 10 }}
+                >
                   Close
                 </Button>
                 <Button
-  variant="contained"
-  color="secondary"
-  onClick={() => navigation.navigate('Chat', { receiverId: selectedItem.id, receiverEmail: selectedItem.email })}
-  style={{ marginTop: 10 }}
->
-  Send Message
-</Button>
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => {
+                    navigation.navigate("Chat", {
+                      receiverId: selectedItem?.id || "",
+                      receiverEmail: selectedItem?.email || "",
+                    });
+                    closeModal(); // Close the modal immediately after navigating to Chat
+                  }}
+                  style={{ marginTop: 10 }}
+                >
+                  Send Message
+                </Button>
               </>
             )}
           </View>
@@ -206,7 +272,12 @@ const WelcomeScreen: React.FC = () => {
       </Modal>
 
       {/* Modal for Selling an Item */}
-      <Modal animationType="slide" transparent visible={isSellModalVisible} onRequestClose={closeSellModal}>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isSellModalVisible}
+        onRequestClose={closeSellModal}
+      >
         <View style={modalStyles.modalContainer}>
           <View style={modalStyles.modalContent}>
             <Typography variant="h6" gutterBottom>
@@ -228,26 +299,43 @@ const WelcomeScreen: React.FC = () => {
             <TextInput
               placeholder="Description"
               value={newItem.description}
-              onChangeText={(text) => setNewItem({ ...newItem, description: text })}
+              onChangeText={(text) =>
+                setNewItem({ ...newItem, description: text })
+              }
               style={styles.input}
               multiline
             />
             <TextInput
               placeholder="Location"
               value={newItem.location}
-              onChangeText={(text) => setNewItem({ ...newItem, location: text })}
+              onChangeText={(text) =>
+                setNewItem({ ...newItem, location: text })
+              }
               style={styles.input}
             />
             <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
               <Text>Select Image</Text>
             </TouchableOpacity>
             {newItem.image ? (
-              <Image source={{ uri: newItem.image }} style={{ width: '100%', height: 100, marginTop: 10 }} />
+              <Image
+                source={{ uri: newItem.image }}
+                style={{ width: "100%", height: 100, marginTop: 10 }}
+              />
             ) : null}
-            <Button variant="contained" color="primary" onClick={handleAddItem} style={{ marginTop: 10 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddItem}
+              style={{ marginTop: 10 }}
+            >
               List Item
             </Button>
-            <Button variant="outlined" color="secondary" onClick={closeSellModal} style={{ marginTop: 10 }}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={closeSellModal}
+              style={{ marginTop: 10 }}
+            >
               Cancel
             </Button>
           </View>
@@ -262,24 +350,24 @@ export default WelcomeScreen;
 const modalStyles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center' as const,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center" as const,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    width: '80%',
+    width: "80%",
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
-    alignItems: 'center' as const,
+    alignItems: "center" as const,
   },
 });
 
 const styles = StyleSheet.create({
   input: {
-    width: '100%',
+    width: "100%",
     padding: 10,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderWidth: 1,
     borderRadius: 5,
     marginVertical: 8,
@@ -287,8 +375,8 @@ const styles = StyleSheet.create({
   imagePicker: {
     marginVertical: 10,
     padding: 10,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
   },
 });
